@@ -1,0 +1,28 @@
+# Source files
+src/
+scripts/
+tests/
+
+# Configuration files
+.github/
+.eslintrc
+.prettierrc
+tsconfig.json
+jest.config.js
+.env
+.env.example
+
+# Development files
+node_modules/
+coverage/
+*.log
+.DS_Store
+*.tgz
+CLAUDE_LINEAR*.md
+ANALYZE_*.md
+*.json.bak
+label-changes*.json
+
+# Git files
+.git/
+.gitignore

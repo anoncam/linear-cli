@@ -1,8 +1,13 @@
 {
   "name": "linear-cli",
   "version": "1.0.0",
-  "description": "CLI for Linear API integration",
+  "description": "Command-line interface for Linear API with cross-team reporting and AI-assisted label management",
   "main": "dist/index.js",
+  "files": [
+    "dist/**/*",
+    "LICENSE",
+    "README.md"
+  ],
   "scripts": {
     "build": "tsc",
     "dev": "nodemon --exec ts-node src/index.ts",
@@ -21,8 +26,19 @@
     "cli",
     "backlog"
   ],
-  "author": "",
-  "license": "ISC",
+  "author": "Cameron Fink <cameron@shebashio.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/anoncam/linear-cli.git"
+  },
+  "bugs": {
+    "url": "https://github.com/anoncam/linear-cli/issues"
+  },
+  "homepage": "https://github.com/anoncam/linear-cli#readme",
+  "engines": {
+    "node": ">=14.0.0"
+  },
   "type": "commonjs",
   "dependencies": {
     "@types/cors": "^2.8.17",

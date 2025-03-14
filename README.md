@@ -274,6 +274,18 @@ The CLI currently supports JSON and Markdown output formats. To add a new format
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed contribution guidelines.
 
+## Releasing
+
+This project uses GitHub Actions for automated versioning, publishing to npm, and creating GitHub Releases:
+
+- Every merge to the main branch triggers a new release
+- Version is automatically bumped (patch increment)
+- Package is published to npm with provenance
+- A signed GitHub Release is created with changelog
+- SBOM (Software Bill of Materials) is attached to each release
+
+For setup instructions, see [PUBLISHING.md](.github/PUBLISHING.md).
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

@@ -1,157 +1,279 @@
 # Linear CLI
 
-A command-line interface for working with Linear issues across teams, assignees, projects, initiatives, and more for better backlog management, labeling practices, and reporting.
+A comprehensive command-line interface for working with Linear issues across teams, assignees, projects, initiatives, and more. This tool enables better backlog management, consistent labeling practices, and enhanced reporting through direct integration with Linear's GraphQL API.
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 ## Features
 
-- Query issues across all teams or specified teams
-- Filter by issue creator, assignee, project, initiative, and more
-- Command-line interface for direct interaction with Linear API
-- Report generation for issue tracking and metrics
-- Label management and analysis
+- **Cross-Team Queries**: Fetch and analyze issues across multiple teams
+- **Interactive UI**: Colorful terminal-based kanban board visualization
+- **Flexible Filtering**: Filter by creator, assignee, project, initiative, and more
+- **Label Management**: AI-assisted label organization with Claude integration
+- **Report Generation**: Create comprehensive markdown reports for analysis
+- **Direct API Integration**: No server component needed - call Linear's GraphQL API directly
+- **User-Friendly**: Uses team keys (e.g., "ENG") instead of requiring UUIDs
+- **Configuration**: Save preferences for faster workflows
+
+## Table of Contents
+
+- [Setup](#setup)
+- [CLI Command Reference](#cli-command-reference)
+- [Advanced Features](#advanced-features)
+  - [Kanban Visualization](#kanban-visualization)
+  - [Label Management Workflow](#label-management-workflow)
+  - [Report Generation](#report-generation)
+- [Architecture](#architecture)
+- [Extending the CLI](#extending-the-cli)
+- [Contributing](#contributing)
+- [License](#license)
 
 ## Setup
 
-1. Clone the repository
-2. Install dependencies:
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/shebashio/linear-mcp.git
+   cd linear-mcp
    ```
+
+2. **Install dependencies**
+   ```bash
    npm install
    ```
-3. Copy `.env.example` to `.env` and add your Linear API key:
-   ```
+
+3. **Configure your Linear API key**
+   
+   Create a `.env` file from the example:
+   ```bash
    cp .env.example .env
    ```
-   Get your API key from [Linear settings](https://linear.app/settings/api):
+   
+   Then get your API key from [Linear settings](https://linear.app/settings/api):
    - Go to your Linear account settings
    - Navigate to API section
    - Create a personal API key (it should start with `lin_api_`)
-   - Copy the key to your `.env` file
-4. Install the CLI tool:
-   ```
+   - Add it to your `.env` file:
+     ```
+     LINEAR_API_KEY=lin_api_your_key_here
+     ```
+
+4. **Install the CLI tool**
+   ```bash
    npm run prepare-cli
    ```
 
-## Development
+## CLI Command Reference
 
-- Build: `npm run build`
-- Run tests: `npm test`
-- Lint code: `npm run lint`
-- Format code: `npm run format`
+### Core Commands
 
-## Linear CLI
+```bash
+# Teams and Users
+linear-cli teams                           # List all teams with IDs and keys
+linear-cli viewer                          # Show current user info
 
-The CLI provides a way to interact directly with Linear from your terminal and export data in formats suitable for analysis or viewing in tools like Claude.
+# Issue Management
+linear-cli issues <team-id-or-key> [time]  # View issues for a team
+linear-cli my-issues [timeframe]           # View your assigned issues
+linear-cli all-issues [timeframe]          # View issues across all teams
+linear-cli create                          # Create a new issue interactively
 
-### Installation
+# Visualization
+linear-cli kanban                          # View all issues in kanban board
+linear-cli kanban <team-id-or-key>         # View team issues in kanban
+linear-cli -k                              # Shorthand for kanban view
 
-Install the command-line tool:
+# Label Management
+linear-cli labels                          # List all labels in workspace
+linear-cli team-labels <team-id-or-key>    # List team-specific labels
+linear-cli analyze-labels                  # Generate label analysis template for Claude
+linear-cli apply-label-changes <json-file> # Apply label changes from JSON
 
-```
-npm run prepare-cli
-```
-
-### CLI Usage
-
-```
-# List all teams to find your team ID
-linear-cli teams
-
-# View issues from a team (can use team ID or team key)
-linear-cli issues <team-id-or-key> <timeframe>
-
-# Get team statistics report
-linear-cli report <team-id-or-key> <timeframe>
-
-# View all your assigned issues across teams
-linear-cli my-issues [timeframe]
-
-# View all issues across teams 
-linear-cli all-issues [timeframe]
-
-# Create a new issue interactively
-linear-cli create
-
-# View issues in a colorful kanban board (press Ctrl+C to exit)
-linear-cli kanban                         # View all issues across teams
-linear-cli kanban [team-id-or-key]        # View issues for a specific team
-
-# List all labels in your workspace
-linear-cli labels
-
-# List all labels for a specific team
-linear-cli team-labels <team-id-or-key>
-
-# Generate a label analysis template for Claude
-linear-cli analyze-labels
-
-# List all projects
-linear-cli projects
-
-# List workflow states
-linear-cli states
-
-# Set default team (so you don't need to specify it each time)
-linear-cli set-team <team-id-or-key>
-
-# Set default timeframe (1w, 2w, 1m, 3m)
-linear-cli set-timeframe 2w
-
-# Set default output file path
-linear-cli set-output <filepath>
-
-# Format and filtering options
-linear-cli labels --format json                # Output as JSON instead of markdown
-linear-cli issues --output my-issues.md        # Specify output file  
-linear-cli all-issues --assignee <user-id>     # Filter by assignee
-linear-cli -k                                  # Quick kanban view of ALL issues
-linear-cli -k ENG                              # Kanban of ENG team issues
-linear-cli issues ENG -k                       # Same as above
-linear-cli my-issues -k                        # View your issues in kanban
-
-# Maintenance commands
-linear-cli clean                               # Remove all generated files in current directory
+# Data & Reports
+linear-cli report <team-id-or-key> [time]  # Generate team report
+linear-cli projects                        # List all projects
+linear-cli states                          # List workflow states
+linear-cli clean                           # Remove generated files
 ```
 
-Key features of the CLI:
-- Direct interaction with Linear API - no server needed
-- Support for both team IDs and three-letter team keys (e.g., ENG, OPS)
-- View issues grouped by team and state
-- View your assigned issues across all teams
-- Create issues interactively
-- Colorful kanban board showing all workflow states with team-specific coloring
-- Markdown formatting for Claude integration
-- Label analysis with Claude AI and bulk label management
-- Report generation with metrics and statistics
+### Configuration Options
 
-The CLI tool fetches data directly from the Linear API and saves it to a file, which you can then view in Claude or analyze directly.
+```bash
+# Set defaults to streamline your workflow
+linear-cli set-team <team-id-or-key>       # Set default team 
+linear-cli set-timeframe <1w|2w|1m|3m>     # Set default time period
+linear-cli set-output <filepath>           # Set default output file path
+linear-cli config                          # Show current configuration
+```
 
-## Label Management Workflow
+### Format & Output Options
 
-The Linear CLI provides a complete workflow for analyzing and managing labels with AI assistance:
+```bash
+# Formatting and output options (can be used with most commands)
+--format json                              # Output as JSON instead of markdown
+--output <filename>                        # Specify output file
+--assignee <user-id>                       # Filter by assignee
+-k, --kanban                               # Show in kanban view
+```
 
-1. **Analyze team labels**:
-   ```
+## Advanced Features
+
+### Kanban Visualization
+
+The CLI provides a colorful terminal-based kanban board for visualizing issues:
+
+```bash
+linear-cli kanban ENG
+```
+
+![Kanban Board Example](https://example.com/kanban-screenshot.png)
+
+Key features:
+- Color-coded workflow states
+- Team-specific coloring
+- Assignee and priority information
+- Live terminal view
+
+### Label Management Workflow
+
+The CLI offers an AI-powered label management workflow:
+
+1. **Export Current Labels**: Get your team's current labels
+   ```bash
    linear-cli team-labels ENG
    ```
-   This creates a file with all labels for the ENG team.
 
-2. **Generate a Claude prompt**:
-   The CLI automatically creates an analysis prompt file (ANALYZE_ENG_LABELS.md) that you can upload to Claude.
+2. **AI Analysis**: The CLI automatically creates an analysis prompt file (`ANALYZE_ENG_LABELS.md`) - upload this to Claude.
 
-3. **Get AI recommendations**:
-   Upload the file to Claude, which will analyze your labels and suggest improvements.
+3. **Get Recommendations**: Claude will analyze and suggest improvements like:
+   - Standardizing naming conventions
+   - Consolidating redundant labels
+   - Organizing by color scheme
+   - Removing unused labels
 
-4. **Apply the changes**:
-   Copy the JSON from Claude's response to a file, then run:
-   ```
+4. **Apply Changes**: Save Claude's JSON output and apply changes:
+   ```bash
    linear-cli apply-label-changes eng-label-changes.json
    ```
-   The tool will automatically find label IDs by name if they aren't provided in the JSON file.
+   
+   The tool automatically:
+   - Resolves label IDs from names when not provided
+   - Handles create, update, delete operations
+   - Reports success/failure for each operation
+   - Confirms all changes before proceeding
 
-5. **Review the results**:
-   The tool will show what changes were made, and you can view the updated labels with:
-   ```
+5. **Verification**: Review the updated labels
+   ```bash
    linear-cli team-labels ENG
    ```
 
-This workflow makes it easy to maintain consistent, well-organized labels across your Linear workspace.
+### Report Generation
+
+Generate comprehensive reports for teams:
+
+```bash
+linear-cli report ENG 2w
+```
+
+Reports include:
+- Issue counts by state
+- Label usage statistics
+- Assignee distribution
+- Completed/canceled issue metrics
+- Timeframe analysis
+
+Use `--output` to save to a specific file:
+
+```bash
+linear-cli report ENG 2w --output eng-sprint-report.md
+```
+
+## Architecture
+
+The Linear CLI is built with the following architecture:
+
+- **TypeScript**: Type-safe implementation
+- **GraphQL Client**: Direct integration with Linear's GraphQL API
+- **Commander**: Command-line parsing and help documentation
+- **Chalk**: Terminal coloring for improved UX
+- **Configuration Store**: Local config for persistent settings
+
+```
+linear-mcp/
+├── scripts/         # Main CLI implementation
+│   └── linearCli.ts # Entry point with commands
+├── src/
+│   ├── api/         # API route definitions
+│   ├── services/    # Linear API client
+│   ├── types/       # TypeScript type definitions
+│   └── utils/       # Utility functions
+├── .env             # Environment configuration
+└── tsconfig.json    # TypeScript configuration
+```
+
+### Key Components
+
+1. **GraphQL Client**: Direct integration with Linear API
+2. **Command Parser**: Processes command-line arguments
+3. **Configuration Manager**: Saves user preferences
+4. **API Services**: Functions to fetch and transform data
+5. **Output Formatters**: Format data as JSON, markdown, or terminal display
+6. **Label Management Engine**: Handles label CRUD operations
+
+## Extending the CLI
+
+The Linear CLI is designed to be easily extended. Here are some ways to add functionality:
+
+### Adding New Commands
+
+1. Locate the command handling section in `scripts/linearCli.ts`
+2. Add your new command case following the pattern of existing commands
+3. Implement your command's functionality, using the GraphQL client for API access
+
+Example structure for adding a new command:
+
+```typescript
+// Add your GraphQL query for the new feature
+const getCustomData = async () => {
+  const query = `
+    query GetCustomData {
+      // your GraphQL query here
+    }
+  `;
+  
+  const data = await executeGraphQLQuery(query);
+  return data.yourDataProperty;
+};
+
+// In the main command handler
+if (command === 'your-new-command') {
+  try {
+    const data = await getCustomData();
+    // Process and display the data
+    console.log('Your new command output:', data);
+  } catch (error) {
+    console.error('Error in your new command:', error);
+  }
+}
+```
+
+### Adding GraphQL Queries
+
+1. Review the Linear API documentation at [developers.linear.app](https://developers.linear.app/docs/graphql/working-with-the-graphql-api)
+2. Add your new query to the appropriate section in `scripts/linearCli.ts`
+3. Create corresponding TypeScript types in `src/types/linear.ts`
+
+### Enhancing Output Formats
+
+The CLI currently supports JSON and Markdown output formats. To add a new format:
+
+1. Add a new format option in the command line arguments section
+2. Implement a formatter function for your new format
+3. Update the output handling to use your formatter when selected
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for detailed contribution guidelines.
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

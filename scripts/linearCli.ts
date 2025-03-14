@@ -477,6 +477,84 @@ const createIssue = async (params: any) => {
   return data.issueCreate;
 };
 
+// Create, update or delete a label
+const updateLabel = async (params: any) => {
+  const { id, teamId, name, color, description, action } = params;
+  
+  // For delete operation
+  if (action === 'delete' && id) {
+    const deleteQuery = `
+      mutation DeleteLabel($id: ID!) {
+        issueLabelDelete(id: $id) {
+          success
+        }
+      }
+    `;
+    
+    const deleteData = await executeGraphQLQuery(deleteQuery, { id });
+    return deleteData.issueLabelDelete;
+  }
+  
+  // For create operation
+  if (action === 'create' && teamId && name) {
+    const createVariables: any = {
+      input: {
+        teamId,
+        name,
+      }
+    };
+    
+    if (color) createVariables.input.color = color;
+    if (description) createVariables.input.description = description;
+    
+    const createQuery = `
+      mutation CreateLabel($input: IssueLabelCreateInput!) {
+        issueLabelCreate(input: $input) {
+          success
+          issueLabel {
+            id
+            name
+            color
+          }
+        }
+      }
+    `;
+    
+    const createData = await executeGraphQLQuery(createQuery, createVariables);
+    return createData.issueLabelCreate;
+  }
+  
+  // For update operation
+  if (action === 'update' && id) {
+    const updateVariables: any = {
+      id,
+      input: {}
+    };
+    
+    if (name) updateVariables.input.name = name;
+    if (color) updateVariables.input.color = color;
+    if (description) updateVariables.input.description = description;
+    
+    const updateQuery = `
+      mutation UpdateLabel($id: ID!, $input: IssueLabelUpdateInput!) {
+        issueLabelUpdate(id: $id, input: $input) {
+          success
+          issueLabel {
+            id
+            name
+            color
+          }
+        }
+      }
+    `;
+    
+    const updateData = await executeGraphQLQuery(updateQuery, updateVariables);
+    return updateData.issueLabelUpdate;
+  }
+  
+  throw new Error('Invalid label operation');
+};
+
 // Main function to handle commands
 const main = async () => {
   try {
@@ -497,7 +575,7 @@ Usage:
   linear-cli labels                       - List all labels in workspace
   linear-cli team-labels <team-id>        - List all labels for a specific team
   linear-cli analyze-labels               - Generate a prompt for Claude to analyze and suggest label changes
-  linear-cli apply-label-changes <file>   - Apply bulk label changes from JSON file (future)
+  linear-cli apply-label-changes <file>   - Apply bulk label changes from JSON file
   
   linear-cli projects                     - List all projects
   linear-cli states                       - List workflow states
@@ -2191,7 +2269,7 @@ When Claude responds:
 1. Find the JSON section in Claude's response
 2. Copy the entire JSON (from { to })
 3. Save it to label-changes.json
-4. In the future, you'll be able to apply these changes with:
+4. Apply the changes with:
    linear-cli apply-label-changes label-changes.json`);
       } catch (error: any) {
         console.error('Error generating label analysis:', error.message);
@@ -2199,6 +2277,237 @@ When Claude responds:
         console.log('1. Your Linear API key is correct in the .env file');
         console.log('2. You have the necessary permissions in Linear');
         console.log('3. The MODIFY_LABELS.md template file exists');
+      }
+      return;
+    }
+    
+    // Apply label changes from JSON file
+    if (command === 'apply-label-changes') {
+      const filePath = args[1];
+      
+      if (!filePath) {
+        console.error('Please provide a path to a JSON file with label changes');
+        console.log('Usage: linear-cli apply-label-changes <file>');
+        return;
+      }
+      
+      try {
+        // Step 1: Read the JSON file
+        let labelChanges;
+        try {
+          const fileContent = fs.readFileSync(filePath, 'utf8');
+          labelChanges = JSON.parse(fileContent);
+        } catch (err) {
+          console.error(`Error reading or parsing JSON file: ${err}`);
+          console.log('Make sure the file exists and contains valid JSON.');
+          return;
+        }
+        
+        if (!labelChanges || typeof labelChanges !== 'object') {
+          console.error('Invalid label changes format. Expected a JSON object.');
+          return;
+        }
+        
+        // Step 2: Validate the JSON structure
+        if (!labelChanges.create && !labelChanges.update && !labelChanges.delete) {
+          console.error('Invalid label changes format. Expected at least one of: create, update, or delete.');
+          console.log('Format should be: { "create": [...], "update": [...], "delete": [...] }');
+          return;
+        }
+        
+        // Step 3: Process changes
+        let createCount = 0;
+        let updateCount = 0;
+        let deleteCount = 0;
+        let errorCount = 0;
+        
+        // Get team ID if we have a team key
+        let teamId = null;
+        if (labelChanges.teamId) {
+          teamId = labelChanges.teamId;
+        } else if (labelChanges.teamKey) {
+          console.log(`Resolving team key ${labelChanges.teamKey}...`);
+          const teams = await getTeams();
+          const teamInfo = teams.find((team: any) => team.key.toUpperCase() === labelChanges.teamKey.toUpperCase());
+          
+          if (!teamInfo) {
+            console.error(`Could not find a team with key "${labelChanges.teamKey}"`);
+            return;
+          }
+          
+          teamId = teamInfo.id;
+          console.log(`Resolved team key ${labelChanges.teamKey} to ID: ${teamId}`);
+        }
+        
+        // Confirm with user
+        const readline = require('readline').createInterface({
+          input: process.stdin,
+          output: process.stdout
+        });
+        
+        console.log(chalk.cyan('\nPreparing to apply the following label changes:'));
+        if (labelChanges.create && labelChanges.create.length > 0) {
+          console.log(chalk.green(`- Create ${labelChanges.create.length} new labels`));
+        }
+        if (labelChanges.update && labelChanges.update.length > 0) {
+          console.log(chalk.yellow(`- Update ${labelChanges.update.length} existing labels`));
+        }
+        if (labelChanges.delete && labelChanges.delete.length > 0) {
+          console.log(chalk.red(`- Delete ${labelChanges.delete.length} labels`));
+        }
+        
+        // Confirm before proceeding
+        const confirm = await new Promise((resolve) => {
+          readline.question(chalk.bold('\nDo you want to proceed? [y/N] '), (answer: string) => {
+            resolve(answer.toLowerCase());
+          });
+        });
+        
+        if (confirm !== 'y' && confirm !== 'yes') {
+          console.log('Operation canceled.');
+          readline.close();
+          return;
+        }
+        
+        readline.close();
+        
+        // Process create operations
+        if (labelChanges.create && labelChanges.create.length > 0) {
+          console.log(chalk.cyan('\nCreating new labels...'));
+          
+          for (const label of labelChanges.create) {
+            try {
+              if (!teamId && !label.teamId) {
+                console.error(`Cannot create label "${label.name}" without a team ID`);
+                errorCount++;
+                continue;
+              }
+              
+              const result = await updateLabel({
+                action: 'create',
+                teamId: label.teamId || teamId,
+                name: label.name,
+                color: label.color,
+                description: label.description
+              });
+              
+              if (result.success) {
+                console.log(chalk.green(`✓ Created label: ${label.name}`));
+                createCount++;
+              } else {
+                console.error(`Failed to create label: ${label.name}`);
+                errorCount++;
+              }
+            } catch (error: any) {
+              console.error(`Error creating label "${label.name}": ${error.message}`);
+              errorCount++;
+            }
+            
+            // Add a small delay to avoid rate limiting
+            await new Promise(resolve => setTimeout(resolve, 200));
+          }
+        }
+        
+        // Process update operations
+        if (labelChanges.update && labelChanges.update.length > 0) {
+          console.log(chalk.cyan('\nUpdating existing labels...'));
+          
+          for (const label of labelChanges.update) {
+            try {
+              if (!label.id) {
+                console.error(`Cannot update label "${label.name}" without an ID`);
+                errorCount++;
+                continue;
+              }
+              
+              const result = await updateLabel({
+                action: 'update',
+                id: label.id,
+                name: label.name,
+                color: label.color,
+                description: label.description
+              });
+              
+              if (result.success) {
+                console.log(chalk.yellow(`✓ Updated label: ${label.name}`));
+                updateCount++;
+              } else {
+                console.error(`Failed to update label: ${label.name}`);
+                errorCount++;
+              }
+            } catch (error: any) {
+              console.error(`Error updating label "${label.name}": ${error.message}`);
+              errorCount++;
+            }
+            
+            // Add a small delay to avoid rate limiting
+            await new Promise(resolve => setTimeout(resolve, 200));
+          }
+        }
+        
+        // Process delete operations
+        if (labelChanges.delete && labelChanges.delete.length > 0) {
+          console.log(chalk.cyan('\nDeleting labels...'));
+          
+          for (const labelId of labelChanges.delete) {
+            try {
+              if (!labelId) {
+                console.error(`Cannot delete label without an ID`);
+                errorCount++;
+                continue;
+              }
+              
+              const result = await updateLabel({
+                action: 'delete',
+                id: labelId
+              });
+              
+              if (result.success) {
+                console.log(chalk.red(`✓ Deleted label ID: ${labelId}`));
+                deleteCount++;
+              } else {
+                console.error(`Failed to delete label: ${labelId}`);
+                errorCount++;
+              }
+            } catch (error: any) {
+              console.error(`Error deleting label ID "${labelId}": ${error.message}`);
+              errorCount++;
+            }
+            
+            // Add a small delay to avoid rate limiting
+            await new Promise(resolve => setTimeout(resolve, 200));
+          }
+        }
+        
+        // Summary
+        console.log(chalk.cyan('\nLabel changes complete:'));
+        console.log(chalk.green(`- Created: ${createCount}`));
+        console.log(chalk.yellow(`- Updated: ${updateCount}`));
+        console.log(chalk.red(`- Deleted: ${deleteCount}`));
+        
+        if (errorCount > 0) {
+          console.error(chalk.red(`- Errors: ${errorCount}`));
+        }
+        
+        // Suggest next steps
+        console.log('\nTo view the updated labels:');
+        if (teamId) {
+          const teams = await getTeams();
+          const teamInfo = teams.find((team: any) => team.id === teamId);
+          if (teamInfo) {
+            console.log(`linear-cli team-labels ${teamInfo.key}`);
+          } else {
+            console.log(`linear-cli team-labels <team-id-or-key>`);
+          }
+        } else {
+          console.log(`linear-cli labels`);
+        }
+      } catch (error: any) {
+        console.error('Error applying label changes:', error.message);
+        console.log('\nPlease check:');
+        console.log('1. Your Linear API key is correct in the .env file');
+        console.log('2. You have the necessary permissions in Linear');
+        console.log('3. The JSON file is properly formatted');
       }
       return;
     }

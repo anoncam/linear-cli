@@ -117,7 +117,37 @@ Key features of the CLI:
 - Create issues interactively
 - Colorful kanban board showing all workflow states with team-specific coloring
 - Markdown formatting for Claude integration
-- Label analysis and management tools
+- Label analysis with Claude AI and bulk label management
 - Report generation with metrics and statistics
 
 The CLI tool fetches data directly from the Linear API and saves it to a file, which you can then view in Claude or analyze directly.
+
+## Label Management Workflow
+
+The Linear CLI provides a complete workflow for analyzing and managing labels with AI assistance:
+
+1. **Analyze team labels**:
+   ```
+   linear-cli team-labels ENG
+   ```
+   This creates a file with all labels for the ENG team.
+
+2. **Generate a Claude prompt**:
+   The CLI automatically creates an analysis prompt file (ANALYZE_ENG_LABELS.md) that you can upload to Claude.
+
+3. **Get AI recommendations**:
+   Upload the file to Claude, which will analyze your labels and suggest improvements.
+
+4. **Apply the changes**:
+   Copy the JSON from Claude's response to a file, then run:
+   ```
+   linear-cli apply-label-changes eng-label-changes.json
+   ```
+
+5. **Review the results**:
+   The tool will show what changes were made, and you can view the updated labels with:
+   ```
+   linear-cli team-labels ENG
+   ```
+
+This workflow makes it easy to maintain consistent, well-organized labels across your Linear workspace.

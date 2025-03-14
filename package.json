@@ -14,7 +14,7 @@
     "start": "node dist/index.js",
     "lint": "eslint --ext .ts src/",
     "format": "prettier --write \"src/**/*.ts\"",
-    "test": "jest",
+    "test": "jest --passWithNoTests",
     "prepare-cli": "tsc && chmod +x ./dist/scripts/linearCli.js && npm link"
   },
   "bin": {

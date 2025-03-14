@@ -35,7 +35,7 @@ jobs:
           
       - name: Install dependencies
         run: |
-          npm install
+          npm install --legacy-peer-deps
           # Regenerate package-lock.json to ensure it's in sync
           npm run rebuild-lockfile
           # Commit the updated package-lock.json if it changed

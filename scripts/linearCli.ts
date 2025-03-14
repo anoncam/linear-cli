@@ -585,6 +585,7 @@ Usage:
   linear-cli create                       - Create a new issue
   linear-cli kanban                       - View issues in a kanban board (-k flag)
   
+  linear-cli clean                        - Remove all generated files from current directory
   linear-cli test                         - Test connection
 
 Options:
@@ -2280,6 +2281,67 @@ When Claude responds:
         console.log('2. You have the necessary permissions in Linear');
         console.log('3. The MODIFY_LABELS.md template file exists');
       }
+      return;
+    }
+    
+    // Clean command to remove generated files
+    if (command === 'clean') {
+      console.log(chalk.cyan('Cleaning up generated files from current directory...'));
+      
+      // Define patterns to match generated files
+      const patterns = [
+        'linear-team-labels*.md',
+        'linear-labels*.md',
+        'linear-projects*.md',
+        'linear-states*.md',
+        'ANALYZE_*.md',
+        'ANALYZE_LABELS.md',
+        '*-label-changes.json',
+        'label-changes.json',
+        'CLAUDE_LINEAR*.md'
+      ];
+      
+      // Create absolute paths for each pattern
+      const absolutePatterns = patterns.map(pattern => 
+        path.join(process.cwd(), pattern)
+      );
+      
+      try {
+        // Use glob to find matching files
+        const { glob } = await import('glob');
+        
+        let filesRemoved = 0;
+        let errors = 0;
+        
+        // Process each pattern and remove matching files
+        for (const pattern of absolutePatterns) {
+          const files = await glob(pattern);
+          
+          for (const file of files) {
+            try {
+              fs.unlinkSync(file);
+              console.log(chalk.green(`✓ Removed: ${path.basename(file)}`));
+              filesRemoved++;
+            } catch (error) {
+              console.error(chalk.red(`Error removing ${file}: ${error}`));
+              errors++;
+            }
+          }
+        }
+        
+        // Display summary
+        if (filesRemoved === 0 && errors === 0) {
+          console.log(chalk.yellow('No files found to clean up.'));
+        } else {
+          console.log(chalk.cyan(`\nCleanup complete! ${filesRemoved} files removed.`));
+          if (errors > 0) {
+            console.log(chalk.red(`Failed to remove ${errors} files.`));
+          }
+        }
+      } catch (error) {
+        console.error(chalk.red('Error during cleanup:'), error);
+      }
+      
       return;
     }
     

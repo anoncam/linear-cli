@@ -107,6 +107,9 @@ linear-cli -k                                  # Quick kanban view of ALL issues
 linear-cli -k ENG                              # Kanban of ENG team issues
 linear-cli issues ENG -k                       # Same as above
 linear-cli my-issues -k                        # View your issues in kanban
+
+# Maintenance commands
+linear-cli clean                               # Remove all generated files in current directory
 ```
 
 Key features of the CLI:

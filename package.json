@@ -33,6 +33,7 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
+    "glob": "^10.3.10",
     "graphql": "^16.10.0",
     "graphql-request": "^4.3.0",
     "nodemon": "^3.1.9",

@@ -58,8 +58,15 @@ A comprehensive command-line interface for working with Linear issues across tea
      ```
 
 4. **Install the CLI tool**
+
+   For development (local installation):
    ```bash
    npm run prepare-cli
+   ```
+   
+   For global installation (after publishing):
+   ```bash
+   npm install -g @anoncam/linear-cli
    ```
 
 ## CLI Command Reference

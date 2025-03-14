@@ -38,7 +38,7 @@ This project and everyone participating in it is governed by our Code of Conduct
    ```
 3. Add the upstream repository as a remote:
    ```bash
-   git remote add upstream https://github.com/shebashio/linear-cli.git
+   git remote add upstream https://github.com/anoncam/linear-cli.git
    ```
 4. Install dependencies:
    ```bash

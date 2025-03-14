@@ -32,7 +32,7 @@ A comprehensive command-line interface for working with Linear issues across tea
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/shebashio/linear-cli.git
+   git clone https://github.com/anoncam/linear-cli.git
    cd linear-cli
    ```
 

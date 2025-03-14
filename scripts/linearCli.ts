@@ -2040,6 +2040,8 @@ Options:
             
             // Format the team labels data
             let labelsData = `## Current Labels for Team: ${teamName}\n\n`;
+            labelsData += `TeamID: \`${teamId}\`\n`;
+            labelsData += `TeamKey: ${teamInfo ? teamInfo.key : 'Unknown'}\n\n`;
             labelsData += '| ID | Name | Color |\n';
             labelsData += '|----|------|-------|\n';
             
@@ -2308,10 +2310,131 @@ When Claude responds:
           return;
         }
         
-        // Step 2: Validate the JSON structure
-        if (!labelChanges.create && !labelChanges.update && !labelChanges.delete) {
+        // Step 2: Validate and transform the JSON structure if needed
+        // First, check if it's using the recommended Claude format (from MODIFY_LABELS.md)
+        const hasClaudeFormat = labelChanges.add || labelChanges.rename || labelChanges.merge || 
+                                labelChanges.remove || labelChanges.recolor;
+        
+        // If it's using Claude's format, transform it to our internal format
+        if (hasClaudeFormat) {
+          console.log(chalk.cyan('Detected Claude AI format, transforming to internal format...'));
+          
+          // Create temporary structure
+          const transformedChanges: any = {
+            create: [],
+            update: [],
+            delete: []
+          };
+          
+          // Handle "add" operations
+          if (labelChanges.add && Array.isArray(labelChanges.add)) {
+            labelChanges.add.forEach((label: any) => {
+              if (label.name) {
+                transformedChanges.create.push({
+                  teamId: label.teamId,
+                  name: label.name,
+                  color: label.color,
+                  description: label.description
+                });
+              }
+            });
+          }
+          
+          // Handle "rename" operations as updates
+          if (labelChanges.rename && Array.isArray(labelChanges.rename)) {
+            labelChanges.rename.forEach((rename: any) => {
+              if (rename.oldName && rename.newName) {
+                // Check if we have an ID, otherwise we'll need to look it up
+                if (rename.id) {
+                  transformedChanges.update.push({
+                    id: rename.id,
+                    name: rename.newName,
+                    color: rename.color
+                  });
+                } else {
+                  console.log(chalk.yellow(`Warning: Rename operation for "${rename.oldName}" requires label ID.`));
+                  console.log('Please include the exact label ID in the JSON file.');
+                }
+              }
+            });
+          }
+          
+          // Handle "recolor" operations as updates
+          if (labelChanges.recolor && Array.isArray(labelChanges.recolor)) {
+            labelChanges.recolor.forEach((recolor: any) => {
+              if (recolor.name && recolor.color) {
+                if (recolor.id) {
+                  transformedChanges.update.push({
+                    id: recolor.id,
+                    color: recolor.color
+                  });
+                } else {
+                  console.log(chalk.yellow(`Warning: Recolor operation for "${recolor.name}" requires label ID.`));
+                  console.log('Please include the exact label ID in the JSON file.');
+                }
+              }
+            });
+          }
+          
+          // Handle "merge" operations (create one label, delete others)
+          if (labelChanges.merge && Array.isArray(labelChanges.merge)) {
+            labelChanges.merge.forEach((merge: any) => {
+              if (merge.sourceLabels && merge.targetLabel) {
+                // First, create or update the target label
+                if (merge.targetLabelId) {
+                  // Update existing label
+                  transformedChanges.update.push({
+                    id: merge.targetLabelId,
+                    name: merge.targetLabel,
+                    color: merge.color
+                  });
+                } else {
+                  // Create new label
+                  transformedChanges.create.push({
+                    teamId: merge.teamId,
+                    name: merge.targetLabel,
+                    color: merge.color
+                  });
+                  console.log(chalk.yellow(`Note: Creating new target label "${merge.targetLabel}" for merge operation.`));
+                }
+                
+                // Then delete the source labels (if we have their IDs)
+                if (merge.sourceLabelIds && Array.isArray(merge.sourceLabelIds)) {
+                  merge.sourceLabelIds.forEach((id: string) => {
+                    if (id) transformedChanges.delete.push(id);
+                  });
+                } else {
+                  console.log(chalk.yellow(`Warning: Merge operation for "${merge.targetLabel}" requires source label IDs.`));
+                  console.log('Please include the exact label IDs in the JSON file.');
+                }
+              }
+            });
+          }
+          
+          // Handle "remove" operations
+          if (labelChanges.remove && Array.isArray(labelChanges.remove)) {
+            labelChanges.remove.forEach((remove: any) => {
+              if (remove.id) {
+                transformedChanges.delete.push(remove.id);
+              } else {
+                console.log(chalk.yellow(`Warning: Remove operation for "${remove.name}" requires label ID.`));
+                console.log('Please include the exact label ID in the JSON file.');
+              }
+            });
+          }
+          
+          // Replace the original with transformed structure
+          labelChanges = transformedChanges;
+          console.log(chalk.green('Successfully transformed format.'));
+        }
+        
+        // Now validate the structure
+        if ((!labelChanges.create || labelChanges.create.length === 0) && 
+            (!labelChanges.update || labelChanges.update.length === 0) && 
+            (!labelChanges.delete || labelChanges.delete.length === 0)) {
           console.error('Invalid label changes format. Expected at least one of: create, update, or delete.');
           console.log('Format should be: { "create": [...], "update": [...], "delete": [...] }');
+          console.log('Or Claude format: { "add": [...], "rename": [...], "remove": [...], ... }');
           return;
         }
         

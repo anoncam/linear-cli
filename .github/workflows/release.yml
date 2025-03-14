@@ -24,17 +24,27 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '16'
+          node-version: '18'
           registry-url: 'https://registry.npmjs.org'
           cache: 'npm'
           
-      - name: Install dependencies
-        run: npm ci
-        
       - name: Configure Git
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
+          
+      - name: Install dependencies
+        run: |
+          npm install
+          # Regenerate package-lock.json to ensure it's in sync
+          npm run rebuild-lockfile
+          # Commit the updated package-lock.json if it changed
+          if git diff --exit-code package-lock.json; then
+            echo "No changes to package-lock.json"
+          else
+            git add package-lock.json
+            git commit -m "chore: update package-lock.json [skip ci]"
+          fi
           
       - name: Run tests
         run: npm test

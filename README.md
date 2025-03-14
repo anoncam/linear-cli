@@ -32,8 +32,8 @@ A comprehensive command-line interface for working with Linear issues across tea
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/shebashio/linear-mcp.git
-   cd linear-mcp
+   git clone https://github.com/shebashio/linear-cli.git
+   cd linear-cli
    ```
 
 2. **Install dependencies**
@@ -198,7 +198,7 @@ The Linear CLI is built with the following architecture:
 - **Configuration Store**: Local config for persistent settings
 
 ```
-linear-mcp/
+linear-cli/
 ├── scripts/         # Main CLI implementation
 │   └── linearCli.ts # Entry point with commands
 ├── src/

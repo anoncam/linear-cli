@@ -33,12 +33,12 @@ This project and everyone participating in it is governed by our Code of Conduct
 1. Fork the repository on GitHub
 2. Clone your fork locally:
    ```bash
-   git clone https://github.com/YOUR-USERNAME/linear-mcp.git
-   cd linear-mcp
+   git clone https://github.com/YOUR-USERNAME/linear-cli.git
+   cd linear-cli
    ```
 3. Add the upstream repository as a remote:
    ```bash
-   git remote add upstream https://github.com/shebashio/linear-mcp.git
+   git remote add upstream https://github.com/shebashio/linear-cli.git
    ```
 4. Install dependencies:
    ```bash

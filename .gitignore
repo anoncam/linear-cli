@@ -24,8 +24,13 @@ yarn-error.log*
 *.sw?
 
 # Various Output Files From Running the CLI
-linear-team-labels.md
+linear-team-labels*.md
+linear-labels*.md
+linear-projects*.md
+linear-states*.md
 CLAUDE.md
 CLAUDE_LINEAR.md
 ANALYZE_LABELS.md
+ANALYZE_*_LABELS.md
+*-label-changes.json
 label-changes.json

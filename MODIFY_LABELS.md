@@ -68,6 +68,7 @@ After your analysis and recommendations, please include a machine-readable secti
 {
   "rename": [
     {
+      "id": "label-id-456",       // IMPORTANT: Include the exact label ID from the input data
       "oldName": "frontend-issue",
       "newName": "frontend",
       "teamId": "team-id-123",
@@ -76,7 +77,9 @@ After your analysis and recommendations, please include a machine-readable secti
   ],
   "merge": [
     {
+      "sourceLabelIds": ["label-id-123", "label-id-456", "label-id-789"],  // IMPORTANT: Include source label IDs
       "sourceLabels": ["low priority", "p3", "can wait"],
+      "targetLabelId": "label-id-target", // If updating an existing label
       "targetLabel": "low-priority",
       "teamId": "team-id-123",
       "color": "#909090"
@@ -91,12 +94,14 @@ After your analysis and recommendations, please include a machine-readable secti
   ],
   "remove": [
     {
+      "id": "label-id-xyz",       // IMPORTANT: Include the exact label ID from the input data
       "name": "old-project-xyz",
       "teamId": "team-id-123"
     }
   ],
   "recolor": [
     {
+      "id": "label-id-bug",       // IMPORTANT: Include the exact label ID from the input data
       "name": "bug",
       "teamId": "team-id-123",
       "color": "#A78BFA"
@@ -105,15 +110,20 @@ After your analysis and recommendations, please include a machine-readable secti
 }
 ```
 
-Always include the exact label ID from the input data in your machine-readable output for precise label identification.
+While including the exact label ID from the input data is preferable for precise label identification, the CLI can now match labels by name if IDs aren't provided. This makes it easier to work with Claude's output format.
 
 ## Execution Instructions
 
 After reviewing your recommendations, the user can:
 
-1. Save the machine-readable JSON section to a file
-2. Execute changes through the Linear web interface manually
-3. Use the JSON file with a future version of linear-cli that will support bulk label operations
+1. Save the machine-readable JSON section to a file named `label-changes.json`
+2. Execute changes using the Linear CLI tool with:
+   ```
+   node scripts/linearCli.ts apply-label-changes label-changes.json
+   ```
+3. Or execute changes through the Linear web interface manually
+
+The CLI will automatically attempt to find label IDs when they are not provided in the JSON file.
 
 ## Processing Instructions for Claude
 
@@ -124,3 +134,6 @@ After reviewing your recommendations, the user can:
 5. Consider both team-specific and workspace-wide labels
 6. Prioritize changes that would most improve clarity and consistency
 7. Provide a machine-readable JSON output at the end that captures all your recommendations
+8. IMPORTANT: Always include the exact label ID from the input data for each label you reference in the JSON output
+9. For any rename, recolor, or remove operations, copy the exact label ID from the input to your JSON output
+10. For merge operations, include all source label IDs in the sourceLabelIds array

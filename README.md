@@ -146,6 +146,7 @@ The Linear CLI provides a complete workflow for analyzing and managing labels wi
    ```
    linear-cli apply-label-changes eng-label-changes.json
    ```
+   The tool will automatically find label IDs by name if they aren't provided in the JSON file.
 
 5. **Review the results**:
    The tool will show what changes were made, and you can view the updated labels with:

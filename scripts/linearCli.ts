@@ -484,7 +484,7 @@ const updateLabel = async (params: any) => {
   // For delete operation
   if (action === 'delete' && id) {
     const deleteQuery = `
-      mutation DeleteLabel($id: ID!) {
+      mutation DeleteLabel($id: String!) {
         issueLabelDelete(id: $id) {
           success
         }
@@ -536,7 +536,7 @@ const updateLabel = async (params: any) => {
     if (description) updateVariables.input.description = description;
     
     const updateQuery = `
-      mutation UpdateLabel($id: ID!, $input: IssueLabelUpdateInput!) {
+      mutation UpdateLabel($id: String!, $input: IssueLabelUpdateInput!) {
         issueLabelUpdate(id: $id, input: $input) {
           success
           issueLabel {
@@ -2381,6 +2381,69 @@ When Claude responds:
         if (hasClaudeFormat) {
           console.log(chalk.cyan('Detected Claude AI format, transforming to internal format...'));
           
+          // Extract team information
+          const teamKey = labelChanges.teamKey;
+          let teamId = labelChanges.teamId;
+          
+          // Fetch all labels if we need to look up label IDs
+          let allLabels: any[] = [];
+          let allTeams: any[] = [];
+          
+          // Resolve team ID from key if needed
+          if (teamKey && !teamId) {
+            console.log(chalk.cyan(`Resolving team key ${teamKey}...`));
+            try {
+              allTeams = await getTeams();
+              const teamInfo = allTeams.find((team: any) => 
+                team.key.toUpperCase() === teamKey.toUpperCase()
+              );
+              
+              if (teamInfo) {
+                teamId = teamInfo.id;
+                console.log(chalk.green(`Resolved team key ${teamKey} to ID: ${teamId}`));
+              } else {
+                console.error(chalk.red(`Could not find a team with key "${teamKey}"`));
+              }
+            } catch (error) {
+              console.error(chalk.red('Error resolving team key:'), error);
+            }
+          }
+          
+          // Fetch all labels for the team to find IDs
+          try {
+            if (teamId) {
+              console.log(chalk.cyan(`Fetching labels for team ID: ${teamId}`));
+              allLabels = await getTeamLabels(teamId);
+              console.log(chalk.green(`Found ${allLabels.length} labels for team`));
+            } else {
+              console.log(chalk.cyan('Fetching all workspace labels...'));
+              allLabels = await getLabels();
+              console.log(chalk.green(`Found ${allLabels.length} labels in workspace`));
+            }
+          } catch (error) {
+            console.error(chalk.red('Error fetching labels:'), error);
+          }
+          
+          // Helper function to find label by name
+          const findLabelId = (name: string) => {
+            if (!name) return null;
+            
+            // Try exact match first
+            const exactMatch = allLabels.find(label => 
+              label.name.toLowerCase() === name.toLowerCase()
+            );
+            
+            if (exactMatch) return exactMatch.id;
+            
+            // Try partial match if exact match fails
+            const partialMatch = allLabels.find(label =>
+              label.name.toLowerCase().includes(name.toLowerCase()) ||
+              name.toLowerCase().includes(label.name.toLowerCase())
+            );
+            
+            return partialMatch ? partialMatch.id : null;
+          };
+          
           // Create temporary structure
           const transformedChanges: any = {
             create: [],
@@ -2406,17 +2469,24 @@ When Claude responds:
           if (labelChanges.rename && Array.isArray(labelChanges.rename)) {
             labelChanges.rename.forEach((rename: any) => {
               if (rename.oldName && rename.newName) {
-                // Check if we have an ID, otherwise we'll need to look it up
-                if (rename.id) {
-                  transformedChanges.update.push({
-                    id: rename.id,
-                    name: rename.newName,
-                    color: rename.color
-                  });
-                } else {
-                  console.log(chalk.yellow(`Warning: Rename operation for "${rename.oldName}" requires label ID.`));
-                  console.log('Please include the exact label ID in the JSON file.');
+                // Check if we have an ID, otherwise we'll try to look it up
+                let labelId = rename.id;
+                if (!labelId) {
+                  labelId = findLabelId(rename.oldName);
+                  if (labelId) {
+                    console.log(chalk.green(`Found ID for label "${rename.oldName}": ${labelId}`));
+                  } else {
+                    console.log(chalk.yellow(`Warning: Rename operation for "${rename.oldName}" requires label ID.`));
+                    console.log('Could not find a matching label ID. Please include the exact label ID in the JSON file.');
+                    return; // Skip this item
+                  }
                 }
+                
+                transformedChanges.update.push({
+                  id: labelId,
+                  name: rename.newName,
+                  color: rename.color
+                });
               }
             });
           }
@@ -2425,15 +2495,22 @@ When Claude responds:
           if (labelChanges.recolor && Array.isArray(labelChanges.recolor)) {
             labelChanges.recolor.forEach((recolor: any) => {
               if (recolor.name && recolor.color) {
-                if (recolor.id) {
-                  transformedChanges.update.push({
-                    id: recolor.id,
-                    color: recolor.color
-                  });
-                } else {
-                  console.log(chalk.yellow(`Warning: Recolor operation for "${recolor.name}" requires label ID.`));
-                  console.log('Please include the exact label ID in the JSON file.');
+                let labelId = recolor.id;
+                if (!labelId) {
+                  labelId = findLabelId(recolor.name);
+                  if (labelId) {
+                    console.log(chalk.green(`Found ID for label "${recolor.name}": ${labelId}`));
+                  } else {
+                    console.log(chalk.yellow(`Warning: Recolor operation for "${recolor.name}" requires label ID.`));
+                    console.log('Could not find a matching label ID. Please include the exact label ID in the JSON file.');
+                    return; // Skip this item
+                  }
                 }
+                
+                transformedChanges.update.push({
+                  id: labelId,
+                  color: recolor.color
+                });
               }
             });
           }
@@ -2443,13 +2520,20 @@ When Claude responds:
             labelChanges.merge.forEach((merge: any) => {
               if (merge.sourceLabels && merge.targetLabel) {
                 // First, create or update the target label
-                if (merge.targetLabelId) {
+                let targetLabelId = merge.targetLabelId;
+                if (!targetLabelId) {
+                  // Try to find target label ID
+                  targetLabelId = findLabelId(merge.targetLabel);
+                }
+                
+                if (targetLabelId) {
                   // Update existing label
                   transformedChanges.update.push({
-                    id: merge.targetLabelId,
+                    id: targetLabelId,
                     name: merge.targetLabel,
                     color: merge.color
                   });
+                  console.log(chalk.green(`Found ID for target label "${merge.targetLabel}": ${targetLabelId}`));
                 } else {
                   // Create new label
                   transformedChanges.create.push({
@@ -2465,6 +2549,28 @@ When Claude responds:
                   merge.sourceLabelIds.forEach((id: string) => {
                     if (id) transformedChanges.delete.push(id);
                   });
+                } else if (merge.sourceLabels && Array.isArray(merge.sourceLabels)) {
+                  // Try to find source label IDs by name
+                  const sourceIds: string[] = [];
+                  let foundAllIds = true;
+                  
+                  for (const sourceName of merge.sourceLabels) {
+                    const sourceId = findLabelId(sourceName);
+                    if (sourceId) {
+                      sourceIds.push(sourceId);
+                      console.log(chalk.green(`Found ID for source label "${sourceName}": ${sourceId}`));
+                    } else {
+                      console.log(chalk.yellow(`Warning: Could not find ID for source label "${sourceName}"`));
+                      foundAllIds = false;
+                    }
+                  }
+                  
+                  if (foundAllIds) {
+                    sourceIds.forEach(id => transformedChanges.delete.push(id));
+                  } else {
+                    console.log(chalk.yellow(`Warning: Merge operation for "${merge.targetLabel}" could not find all source label IDs.`));
+                    console.log('Some source labels may not be deleted.');
+                  }
                 } else {
                   console.log(chalk.yellow(`Warning: Merge operation for "${merge.targetLabel}" requires source label IDs.`));
                   console.log('Please include the exact label IDs in the JSON file.');
@@ -2476,11 +2582,23 @@ When Claude responds:
           // Handle "remove" operations
           if (labelChanges.remove && Array.isArray(labelChanges.remove)) {
             labelChanges.remove.forEach((remove: any) => {
-              if (remove.id) {
-                transformedChanges.delete.push(remove.id);
+              let labelId = remove.id;
+              if (!labelId && remove.name) {
+                labelId = findLabelId(remove.name);
+                if (labelId) {
+                  console.log(chalk.green(`Found ID for label "${remove.name}": ${labelId}`));
+                } else {
+                  console.log(chalk.yellow(`Warning: Remove operation for "${remove.name}" requires label ID.`));
+                  console.log('Could not find a matching label ID. Please include the exact label ID in the JSON file.');
+                  return; // Skip this item
+                }
+              }
+              
+              if (labelId) {
+                transformedChanges.delete.push(labelId);
               } else {
-                console.log(chalk.yellow(`Warning: Remove operation for "${remove.name}" requires label ID.`));
-                console.log('Please include the exact label ID in the JSON file.');
+                console.log(chalk.yellow(`Warning: Remove operation missing both name and id.`));
+                console.log('Please include either a label name or ID in the JSON file.');
               }
             });
           }

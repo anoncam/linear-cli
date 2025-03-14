@@ -1,6 +1,6 @@
 {
   "name": "linear-cli",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Command-line interface for Linear API with cross-team reporting and AI-assisted label management",
   "main": "dist/index.js",
   "files": [

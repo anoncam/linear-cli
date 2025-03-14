@@ -15,7 +15,6 @@
     "lint": "eslint \"src/**/*.ts\" \"scripts/**/*.ts\"",
     "format": "prettier --write \"src/**/*.ts\"",
     "test": "jest --passWithNoTests",
-    "postinstall": "npm run rebuild-lockfile || echo 'Skipping lockfile rebuild'",
     "rebuild-lockfile": "rm -f package-lock.json && npm i --package-lock-only --legacy-peer-deps",
     "prepare-cli": "tsc && chmod +x ./dist/scripts/linearCli.js && npm link"
   },

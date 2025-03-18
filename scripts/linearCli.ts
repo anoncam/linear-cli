@@ -437,6 +437,25 @@ const getViewer = async () => {
   return data.viewer;
 };
 
+const getTeamMembers = async (teamId: string) => {
+  const query = `
+    query GetTeamMembers($teamId: String!) {
+      team(id: $teamId) {
+        members {
+          nodes {
+            id
+            name
+            email
+          }
+        }
+      }
+    }
+  `;
+  
+  const data = await executeGraphQLQuery(query, { teamId });
+  return data.team.members.nodes;
+};
+
 const createIssue = async (params: any) => {
   const { teamId, title, description, labelIds, assigneeId, stateId, priorityId, projectId } = params;
   
@@ -1464,6 +1483,9 @@ Options:
           
           selectedTeam = teams[teamIndex as number];
           selectedTeamId = selectedTeam.id;
+          
+          // Close the readline interface after team selection
+          readline.close();
         }
         
         console.log(`\nCreating issue for team: ${selectedTeam.name} (${selectedTeam.key})`);
@@ -1494,12 +1516,65 @@ Options:
           });
         });
         
+        // Get workflow states for the team
+        const states = await getWorkflowStates(selectedTeamId as string);
+        if (states && states.length > 0) {
+          console.log('\nSelect a status:');
+          states.forEach((state: any, index: number) => {
+            console.log(`${index + 1}. ${state.name}`);
+          });
+        }
+        
+        // Let user select a status
+        let selectedStateId: string | undefined = undefined;
+        if (states && states.length > 0) {
+          const stateIndex = await new Promise((resolve) => {
+            readline.question('\nStatus number (optional, press enter to skip): ', (answer: string) => {
+              resolve(answer ? parseInt(answer, 10) - 1 : -1);
+            });
+          });
+          
+          if (!isNaN(stateIndex as number) && stateIndex as number >= 0 && stateIndex as number < states.length) {
+            selectedStateId = states[stateIndex as number].id;
+            console.log(`Selected status: ${states[stateIndex as number].name}`);
+          }
+        }
+        
+        // Get team members for assignee selection
+        let assigneeId: string | undefined = undefined;
+        try {
+          const teamMembers = await getTeamMembers(selectedTeamId as string);
+          
+          if (teamMembers && teamMembers.length > 0) {
+            console.log('\nSelect an assignee:');
+            console.log(`0. No assignee`);
+            teamMembers.forEach((member: any, index: number) => {
+              console.log(`${index + 1}. ${member.name} (${member.email})`);
+            });
+            
+            const assigneeIndex = await new Promise((resolve) => {
+              readline.question('\nAssignee number (optional, press enter to skip): ', (answer: string) => {
+                resolve(answer ? parseInt(answer, 10) : 0);
+              });
+            });
+            
+            if (!isNaN(assigneeIndex as number) && assigneeIndex as number > 0 && assigneeIndex as number <= teamMembers.length) {
+              assigneeId = teamMembers[assigneeIndex as number - 1].id;
+              console.log(`Selected assignee: ${teamMembers[assigneeIndex as number - 1].name}`);
+            }
+          }
+        } catch (error) {
+          console.log('Error fetching team members. Skipping assignee selection.');
+        }
+        
         // Create the issue
         console.log('\nCreating issue...');
         const result = await createIssue({
           teamId: selectedTeamId,
           title,
-          description: description || undefined
+          description: description || undefined,
+          stateId: selectedStateId,
+          assigneeId
         });
         
         readline.close();

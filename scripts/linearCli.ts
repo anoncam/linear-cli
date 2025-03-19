@@ -1456,17 +1456,17 @@ Options:
           selectedTeam = teams.find((team: any) => team.id === selectedTeamId);
         }
         
+        // Create a readline interface for user input
+        const readline = require('readline').createInterface({
+          input: process.stdin,
+          output: process.stdout
+        });
+        
         if (!selectedTeam) {
           // No default team or default team not found, show team selection
           console.log('\nSelect a team:');
           teams.forEach((team: any, index: number) => {
             console.log(`${index + 1}. ${team.name} (${team.key})`);
-          });
-          
-          // Use readline for interactive input
-          const readline = require('readline').createInterface({
-            input: process.stdin,
-            output: process.stdout
           });
           
           const teamIndex = await new Promise((resolve) => {
@@ -1489,12 +1489,6 @@ Options:
         }
         
         console.log(`\nCreating issue for team: ${selectedTeam.name} (${selectedTeam.key})`);
-        
-        // Create a readline interface for user input
-        const readline = require('readline').createInterface({
-          input: process.stdin,
-          output: process.stdout
-        });
         
         // Get issue title
         const title = await new Promise((resolve) => {

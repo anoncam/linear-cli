@@ -1,6 +1,6 @@
 {
   "name": "@anoncam/linear-cli",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "Command-line interface for Linear API with cross-team reporting and AI-assisted label management",
   "main": "dist/index.js",
   "files": [

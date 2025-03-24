@@ -48,6 +48,8 @@
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
     "@types/node": "^22.13.10",
+    "neo-blessed": "^0.2.0",
+    "@types/blessed": "^0.1.25",
     "axios": "^1.8.3",
     "chalk": "^4.1.2",
     "cors": "^2.8.5",

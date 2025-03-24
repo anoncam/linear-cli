@@ -5,6 +5,7 @@ import { exec } from 'child_process';
 import dotenv from 'dotenv';
 import { GraphQLClient } from 'graphql-request';
 import chalk from 'chalk';
+import { showEnhancedKanban } from '../src/kanban/enhancedKanban';
 
 dotenv.config();
 
@@ -1210,9 +1211,15 @@ Options:
           limit: 200
         });
         
-        // Open kanban view if requested
+        // Open enhanced kanban view if requested
         if (kanbanOption) {
-          await showKanbanView(issues, teams);
+          const timeframeValues = getTimeframe(timeframe);
+          await showEnhancedKanban({
+            apiKey: LINEAR_API_KEY,
+            assigneeId: 'me',
+            startDate: timeframeValues.startDate,
+            endDate: timeframeValues.endDate
+          });
           return;
         }
         
@@ -1333,9 +1340,14 @@ Options:
         
         const issues = await getIssues(params);
         
-        // Open kanban view if requested
+        // Open enhanced kanban view if requested
         if (kanbanOption) {
-          await showKanbanView(issues, teams);
+          const timeframeValues = getTimeframe(timeframe);
+          await showEnhancedKanban({
+            apiKey: LINEAR_API_KEY,
+            startDate: timeframeValues.startDate,
+            endDate: timeframeValues.endDate
+          });
           return;
         }
         
@@ -1722,8 +1734,15 @@ Options:
           return;
         }
         
-        // Show kanban view
-        await showKanbanView(issues, teams, workflowStates);
+        // Show enhanced kanban view
+        const timeframeValues = getTimeframe(timeframe);
+        await showEnhancedKanban({
+          apiKey: LINEAR_API_KEY,
+          teamId: teamId || undefined,
+          teamName: teamName || undefined,
+          startDate: timeframeValues.startDate,
+          endDate: timeframeValues.endDate
+        });
       } catch (error: any) {
         console.error('Error loading kanban view:', error.message);
         console.log('\nPlease check:');

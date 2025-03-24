@@ -17,6 +17,15 @@ export interface LinearIssue {
   blockedBy: LinearIssueRelation[];
   blocking: LinearIssueRelation[];
   relatedTo: LinearIssueRelation[];
+  comments?: Array<{
+    id: string;
+    body: string;
+    createdAt: string;
+    user?: {
+      id: string;
+      name: string;
+    };
+  }>;
 }
 
 export interface LinearState {

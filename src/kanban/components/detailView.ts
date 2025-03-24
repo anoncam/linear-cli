@@ -18,7 +18,7 @@ export function setupDetailView(
   apiService?: any
 ): void {
   // Set a property on the detailBox to identify it
-  detailBox.isDetailView = true;
+  (detailBox as any).isDetailView = true;
 
   // Create the content container
   const contentContainer = blessed.box({
@@ -327,12 +327,12 @@ export function setupDetailView(
         vi: true
       });
       
-      prompt.input('Enter parent issue identifier (e.g., ENG-123):', '', (err, value) => {
+      prompt.input('Enter parent issue identifier (e.g., ENG-123):', '', (err: Error | null, value: string | null) => {
         if (err || !value) return;
         
         if (apiService) {
           // Use the issue relations utility to set parent
-          setParentRelation(apiService, state, state.selectedIssueId, value)
+          setParentRelation(apiService, state, state.selectedIssueId || '', value)
             .then((success) => {
               const message = blessed.message({
                 parent: detailBox.screen,
@@ -391,12 +391,12 @@ export function setupDetailView(
         vi: true
       });
       
-      prompt.input('Enter issue identifier that this issue blocks (e.g., ENG-123):', '', (err, value) => {
+      prompt.input('Enter issue identifier that this issue blocks (e.g., ENG-123):', '', (err: Error | null, value: string | null) => {
         if (err || !value) return;
         
         if (apiService) {
           // Use the issue relations utility to create blocking relationship
-          createBlockingRelation(apiService, state, state.selectedIssueId, value)
+          createBlockingRelation(apiService, state, state.selectedIssueId || '', value)
             .then((success) => {
               const message = blessed.message({
                 parent: detailBox.screen,
@@ -455,12 +455,12 @@ export function setupDetailView(
         vi: true
       });
       
-      prompt.input('Enter related issue identifier (e.g., ENG-123):', '', (err, value) => {
+      prompt.input('Enter related issue identifier (e.g., ENG-123):', '', (err: Error | null, value: string | null) => {
         if (err || !value) return;
         
         if (apiService) {
           // Use the issue relations utility to create related relationship
-          createRelatedRelation(apiService, state, state.selectedIssueId, value)
+          createRelatedRelation(apiService, state, state.selectedIssueId || '', value)
             .then((success) => {
               const message = blessed.message({
                 parent: detailBox.screen,

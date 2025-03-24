@@ -219,9 +219,8 @@ export function setupBoard(
           fg: isFocused ? 'white' : priorityColor,
         },
         focus: {
-          border: {
-            fg: 'white',
-          },
+          bg: 'blue',
+          fg: 'white',
         },
       },
       border: {

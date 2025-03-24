@@ -229,41 +229,7 @@ export class LinearApiService {
                 }
               }
             }
-            # Relationship fields
-            blocks {
-              nodes {
-                id
-                identifier
-                title
-                state {
-                  id
-                  name
-                  type
-                }
-                team {
-                  id
-                  name
-                  key
-                }
-              }
-            }
-            blockedBy {
-              nodes {
-                id
-                identifier
-                title
-                state {
-                  id
-                  name
-                  type
-                }
-                team {
-                  id
-                  name
-                  key
-                }
-              }
-            }
+            # Relationship fields only use relations field for all relationship types
             relations {
               nodes {
                 id
@@ -299,12 +265,18 @@ export class LinearApiService {
       
       return {
         issues: data.issues.nodes.map((issue: any) => {
-          // Transform related issues into appropriate relationship arrays
-          const blocking = issue.blocks?.nodes || [];
-          const blockedBy = issue.blockedBy?.nodes || [];
-          
-          // Process general relations
+          // Process all relations from the relations field
           const relations = issue.relations?.nodes || [];
+          
+          // Group by relationship type
+          const blocking = relations
+            .filter((rel: any) => rel.type === 'blocks')
+            .map((rel: any) => rel.relatedIssue);
+            
+          const blockedBy = relations
+            .filter((rel: any) => rel.type === 'blocked_by')
+            .map((rel: any) => rel.relatedIssue);
+            
           const relatedTo = relations
             .filter((rel: any) => rel.type === 'relates_to')
             .map((rel: any) => rel.relatedIssue);
@@ -830,30 +802,7 @@ export class LinearApiService {
               }
             }
           }
-          blocks {
-            nodes {
-              id
-              identifier
-              title
-              state {
-                id
-                name
-                type
-              }
-            }
-          }
-          blockedBy {
-            nodes {
-              id
-              identifier
-              title
-              state {
-                id
-                name
-                type
-              }
-            }
-          }
+          # We use relations field for all relationship types except parent/child
           relations {
             nodes {
               id
@@ -899,23 +848,7 @@ export class LinearApiService {
         });
       });
       
-      // Add blocked by issues
-      issue.blockedBy.nodes.forEach((blocker: any) => {
-        relations.push({
-          type: 'blocked_by',
-          issue: blocker,
-          relationId: null
-        });
-      });
-      
-      // Add blocking issues
-      issue.blocks.nodes.forEach((blocking: any) => {
-        relations.push({
-          type: 'blocks',
-          issue: blocking,
-          relationId: null
-        });
-      });
+      // For blocking/blocked by, we rely on the relations field
       
       // Add other relations
       issue.relations.nodes.forEach((relation: any) => {

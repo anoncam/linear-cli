@@ -18,7 +18,7 @@ export function setupRelationshipGraph(
   apiService?: LinearApiService
 ): void {
   // Set property to identify this box
-  graphBox.isRelationshipGraph = true;
+  (graphBox as any).isRelationshipGraph = true;
 
   // Create graph visualization container
   const graphContainer = blessed.box({
@@ -65,7 +65,7 @@ export function setupRelationshipGraph(
   });
 
   // Function to create a simple box for an issue node
-  function createIssueNode(issue: LinearIssue | LinearIssueRelation, x: number, y: number, type: string): blessed.Widgets.BoxElement {
+  function createIssueNode(issue: LinearIssue | LinearIssueRelation, x: number, y: number, type: string): ReturnType<typeof blessed.box> {
     const color = getColorForRelationType(type);
     
     const box = blessed.box({
@@ -89,7 +89,7 @@ export function setupRelationshipGraph(
           bg: 'blue',
         },
       },
-    });
+    }) as ReturnType<typeof blessed.box> & { issueData?: LinearIssue | LinearIssueRelation; relationType?: string };
     
     // Store issue data on the box for reference
     box.issueData = issue;
@@ -100,8 +100,8 @@ export function setupRelationshipGraph(
   
   // Helper function to draw a simple "line" between boxes using ASCII characters
   function drawConnectionLine(
-    fromBox: blessed.Widgets.BoxElement, 
-    toBox: blessed.Widgets.BoxElement, 
+    fromBox: ReturnType<typeof blessed.box>, 
+    toBox: ReturnType<typeof blessed.box>, 
     relationshipType: string
   ): void {
     const fromX = fromBox.left + Math.floor(fromBox.width! / 2);
@@ -196,7 +196,7 @@ export function setupRelationshipGraph(
       const centerNode = createIssueNode(issue, 30, 10, 'current');
       
       // Track all created nodes
-      const nodes: blessed.Widgets.BoxElement[] = [centerNode];
+      const nodes: ReturnType<typeof blessed.box>[] = [centerNode];
       
       // Calculate positions for related issues in a circular pattern
       const radius = 15;
@@ -220,9 +220,10 @@ export function setupRelationshipGraph(
       // Add click behavior to nodes
       nodes.forEach(node => {
         node.on('click', () => {
-          if (node.issueData && node.issueData.id) {
+          const typedNode = node as ReturnType<typeof blessed.box> & { issueData?: LinearIssue | LinearIssueRelation };
+          if (typedNode.issueData && typedNode.issueData.id) {
             // Show details for the clicked issue
-            state.setSelectedIssue(node.issueData.id);
+            state.setSelectedIssue(typedNode.issueData.id);
             state.setViewMode(ViewMode.DETAIL);
           }
         });

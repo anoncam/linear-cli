@@ -5,6 +5,8 @@ import { exec } from 'child_process';
 import dotenv from 'dotenv';
 import { GraphQLClient } from 'graphql-request';
 import chalk from 'chalk';
+import { showEnhancedKanban } from '../src/kanban/enhancedKanban';
+import { showEnhancedKanbanRelationships } from '../src/kanban/enhancedKanbanRelationships';
 
 dotenv.config();
 
@@ -65,6 +67,68 @@ const saveConfig = () => {
   fs.writeFileSync(CONFIG_FILE, JSON.stringify(config, null, 2));
 };
 
+// Function to launch the enhanced kanban board with relationship visualization
+const testRelationships = async () => {
+  try {
+    console.log('Launching enhanced kanban with relationship visualization...');
+    await showEnhancedKanbanRelationships({
+      apiKey: LINEAR_API_KEY,
+      teamId: config.defaultTeam || undefined,
+      teamName: undefined,
+      assigneeId: undefined,
+      startDate: undefined,
+      endDate: undefined
+    });
+  } catch (error) {
+    console.error('Error launching relationship visualization:', error);
+  }
+};
+
+// Function to display help
+const displayHelp = () => {
+  console.log(`
+LINEAR CLI - Command line interface for Linear
+
+USAGE
+  linear-cli <command> [options]
+
+COMMANDS
+  issues           List issues from Linear (default command)
+  teams            List available teams
+  team-set         Set default team for future commands
+  labels           List all labels
+  kanban           Show issues in kanban view in terminal (-k)
+  relationships    Show issues with relationship visualization (-r)
+  members          List team members
+  create           Create a new issue
+  help             Show this help message
+
+OPTIONS
+  -t, --team          <team-id>  Filter by team ID or key
+  -o, --output        <file>     Write output to file
+  -f, --format        <format>   Output format: json or markdown (default)
+  -a, --assignee      <user-id>  Filter by assignee ID
+  -k, --kanban                   Show issues in kanban view
+  -r, --relationships            Show issues with relationship visualization
+  -h, --help                     Show help
+
+EXAMPLES
+  linear-cli issues                    List all issues
+  linear-cli issues ENG                List issues from team ENG
+  linear-cli issues ENG 1w             List issues from team ENG in the last week
+  linear-cli issues --assignee me      List issues assigned to you
+  linear-cli kanban ENG                Show ENG issues in kanban view
+  linear-cli relationships ENG         Show ENG issues with relationship visualization
+  linear-cli issues -r                 Show all issues with relationship visualization
+  linear-cli team-set ENG              Set ENG as default team
+  
+CONFIGURATION
+  Configuration is stored in: ${CONFIG_FILE}
+  Current default team: ${config.defaultTeam || 'None'}
+  Current default timeframe: ${config.defaultTimeframe}
+`);
+};
+
 // Parse command line arguments
 const args = process.argv.slice(2);
 let command = args[0]?.toLowerCase();
@@ -80,10 +144,16 @@ let outputOption: string | null = null;
 let formatOption: 'json' | 'markdown' = 'markdown';
 let assigneeOption: string | null = null;
 let kanbanOption: boolean = false;
+let relationshipOption: boolean = false;
 
 // Check for kanban flag anywhere in the args
 if (args.includes('-k') || args.includes('--kanban')) {
   kanbanOption = true;
+}
+
+// Check for relationship flag anywhere in the args
+if (args.includes('-r') || args.includes('--relationships')) {
+  relationshipOption = true;
 }
 
 for (let i = 0; i < args.length; i++) {
@@ -125,6 +195,19 @@ for (let i = 0; i < args.length; i++) {
     i -= 1; // Adjust index after removal
     continue;
   }
+  
+  if (args[i] === '--relationships' || args[i] === '-r') {
+    // We already set the flag, now just remove from args
+    args.splice(i, 1);
+    i -= 1; // Adjust index after removal
+    continue;
+  }
+}
+
+// Check for help command or flag
+if (command === 'help' || args.includes('-h') || args.includes('--help')) {
+  displayHelp();
+  process.exit(0);
 }
 
 // Determine timeframe in ISO dates
@@ -602,7 +685,7 @@ Usage:
   linear-cli my-issues                    - View all issues assigned to you
   linear-cli all-issues                   - View all issues across teams
   linear-cli create                       - Create a new issue
-  linear-cli kanban                       - View issues in a kanban board (-k flag)
+  linear-cli kanban                       - View issues in a kanban board with relationship visualization (-k flag)
   
   linear-cli clean                        - Remove all generated files from current directory
   linear-cli test                         - Test connection
@@ -611,7 +694,7 @@ Options:
   --output, -o <filepath>                 - Specify output file path for issues/report
   --format, -f <json|markdown>            - Output format (default: markdown)
   --assignee, -a <user-id>                - Filter by assignee
-  --kanban, -k                            - Open kanban view
+  --kanban, -k                            - Open kanban view with relationship visualization
       `);
       return;
     }
@@ -1210,9 +1293,10 @@ Options:
           limit: 200
         });
         
-        // Open kanban view if requested
+        // Open enhanced kanban view if requested
         if (kanbanOption) {
-          await showKanbanView(issues, teams);
+          console.log('Starting enhanced kanban view with relationship visualization...');
+          await testRelationships();
           return;
         }
         
@@ -1333,9 +1417,10 @@ Options:
         
         const issues = await getIssues(params);
         
-        // Open kanban view if requested
+        // Open enhanced kanban view if requested
         if (kanbanOption) {
-          await showKanbanView(issues, teams);
+          console.log('Starting enhanced kanban view with relationship visualization...');
+          await testRelationships();
           return;
         }
         
@@ -1591,9 +1676,15 @@ Options:
       return;
     }
     
-    // Handle kanban command explicitly
-    if (command === 'kanban') {
-      console.log('Opening kanban view...');
+    // Handle kanban or relationships command
+    if (command === 'kanban' || command === 'relationships' || (relationshipOption && command === 'issues')) {
+      console.log('Opening enhanced kanban view...');
+      
+      // If relationships command or flag, set relationshipOption to true
+      if (command === 'relationships' || relationshipOption) {
+        relationshipOption = true;
+        console.log('Relationship visualization enabled.');
+      }
       
       try {
         // Extract team if specified
@@ -1722,8 +1813,28 @@ Options:
           return;
         }
         
-        // Show kanban view
-        await showKanbanView(issues, teams, workflowStates);
+        // Show enhanced kanban view with relationship visualization if requested
+        if (relationshipOption) {
+          console.log('Starting relationship visualization...');
+          await showEnhancedKanbanRelationships({
+            apiKey: LINEAR_API_KEY,
+            teamId: teamId || undefined,
+            teamName: teamName || undefined,
+            assigneeId: assigneeOption || undefined,
+            startDate,
+            endDate
+          });
+        } else {
+          console.log('Starting enhanced kanban view...');
+          await showEnhancedKanban({
+            apiKey: LINEAR_API_KEY,
+            teamId: teamId || undefined,
+            teamName: teamName || undefined,
+            assigneeId: assigneeOption || undefined,
+            startDate,
+            endDate
+          });
+        }
       } catch (error: any) {
         console.error('Error loading kanban view:', error.message);
         console.log('\nPlease check:');

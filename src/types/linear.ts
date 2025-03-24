@@ -12,6 +12,20 @@ export interface LinearIssue {
   labels: LinearLabel[];
   createdAt: string;
   updatedAt: string;
+  parent: LinearIssueRelation | null;
+  children: LinearIssueRelation[];
+  blockedBy: LinearIssueRelation[];
+  blocking: LinearIssueRelation[];
+  relatedTo: LinearIssueRelation[];
+  comments?: Array<{
+    id: string;
+    body: string;
+    createdAt: string;
+    user?: {
+      id: string;
+      name: string;
+    };
+  }>;
 }
 
 export interface LinearState {
@@ -44,6 +58,29 @@ export interface LinearLabel {
   color: string;
 }
 
+export interface LinearIssueRelation {
+  id: string;
+  identifier: string;
+  title: string;
+  state?: LinearState;
+  team?: LinearTeam;
+}
+
+export interface IssueRelationInput {
+  issueId: string;
+  relationIssueId: string;
+  relationType: IssueRelationType;
+}
+
+export enum IssueRelationType {
+  BLOCKS = "blocks",
+  BLOCKED_BY = "blocked_by",
+  RELATED = "related",
+  DUPLICATE = "duplicate",
+  PARENT = "parent",
+  CHILD = "child"
+}
+
 export interface IssueQueryParams {
   teams?: string[];
   creators?: string[];
@@ -56,4 +93,5 @@ export interface IssueQueryParams {
   endDate?: string;
   limit?: number;
   offset?: number;
+  includeRelationships?: boolean;
 }
